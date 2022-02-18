@@ -1,0 +1,159 @@
+package com.endterm.project.services;
+
+import com.endterm.project.dto.UserDto;
+import com.endterm.project.dto.UserNameWithImageDto;
+import com.endterm.project.entities.Image;
+import com.endterm.project.entities.ImageBackground;
+import com.endterm.project.entities.MyUser;
+import com.endterm.project.entities.Role;
+import com.endterm.project.mapper.UserMapper;
+import com.endterm.project.repos.UserRepo;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Transactional
+@Service
+public class UserServiceImpl implements UserServiceInterface {
+
+
+    private final UserRepo userRepo;
+    private final UserMapper userMapper;
+
+    @Autowired
+    public UserServiceImpl(UserRepo userRepo, UserMapper userMapper) {
+        this.userRepo = userRepo;
+        this.userMapper = userMapper;
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        MyUser myUser = userRepo.findByEmail(email)
+                .orElseThrow(
+                        () ->
+                                new UsernameNotFoundException("Email not found - " + email));
+        if (myUser == null) {
+            throw new UsernameNotFoundException("Invalid username");
+        }
+        User springSecurityUser =
+                new User(myUser.getEmail(),
+                        myUser.getPassword(),
+                        mapRolesToAuthorities(myUser.getRoles()));
+        return springSecurityUser;
+    }
+
+    private List<? extends GrantedAuthority> mapRolesToAuthorities(List<Role> roles) {
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        for (Role role : roles) {
+            SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role.getRoleName());
+            authorities.add(authority);
+        }
+        return authorities;
+    }
+
+    @Override
+    public List<MyUser> searchUsersByName(String name) {
+        return userRepo.findByFirstName(name);
+    }
+
+    @Override
+    public List<UserNameWithImageDto> searchUserByFirstnameOrLastname(String input) {
+        return userRepo.findUsersForSearch(input);
+    }
+
+    @Override
+    public UserDto getCurrentUser() {
+        UserDto userDto = new UserDto();
+        try {
+            MyUser myUser = userRepo.findByEmail(findCurrentUsername())
+                    .orElseThrow(
+                            () ->
+                                    new UsernameNotFoundException("Email not found - " + findCurrentUsername()));
+
+            userDto = userMapper.mapToDto(myUser);
+
+            return userDto;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return userDto;
+    }
+
+    @Override
+    public UserDto getCurrentUser(int id) {
+        UserDto userDto = new UserDto();
+        try {
+            MyUser myUser = userRepo.findById(id)
+                    .orElseThrow(
+                            () -> new UsernameNotFoundException("Email not found - " + findCurrentUsername()));
+
+            userDto = userMapper.mapToDto(myUser);
+
+            return userDto;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return userDto;
+    }
+
+    @Override
+    public List<UserDto> getAllUsers() {
+
+        return userMapper.mapListToDto(userRepo.findAll());
+    }
+
+    @Override
+    public MyUser findById(Integer userid) {
+        return userRepo.findById(userid)
+                .orElseThrow(
+                        () ->
+                                new IllegalArgumentException("id not found"));
+
+    }
+
+    @Override
+    public Integer findUserIdByEmail(String email) {
+        return userRepo.findUserIdByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("id not found"));
+    }
+
+    @Override
+    public String findCurrentUsername() {
+        User user = (User) SecurityContextHolder.
+                getContext().getAuthentication().getPrincipal();
+        return user.getUsername();
+
+    }
+
+    @Override
+    public void userSave(MyUser user) {
+        userRepo.save(user);
+    }
+
+    @Override
+    public Image findImageProfileFromUserId(Integer userid) {
+        return userRepo.findImageProfileFromUserId(userid).orElseThrow(() -> new IllegalArgumentException("not found"));
+    }
+
+
+    @Override
+    public MyUser getUserDetails(String email) {
+        return userRepo.findByEmailNotOptional(email);
+    }
+
+    @Override
+    public ImageBackground findImageBackgroundFromUserId(Integer userid) {
+        return userRepo.findImageBackgroundFromUserId(userid).orElseThrow(() -> new IllegalArgumentException("Image background not found"));
+
+    }
+}
