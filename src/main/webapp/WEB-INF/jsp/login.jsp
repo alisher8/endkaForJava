@@ -51,10 +51,6 @@
 </head>
 <body>
 
-<%--<c:set var="income" scope="session" value="${4000*4}"/>--%>
-<%--<c:if test="${empty param.error}">--%>
-<%--<p>My income is: <c:out value="${param.error}"/><p>--%>
-<%--    </c:if>--%>
 <div class="container-fluid">
     <div class="row">
 
@@ -96,9 +92,7 @@
                 <button type="submit" class="btn btn-success btn-block">Create New Account</button>
             </form>
         </div>
-        <div class="fixed-bottom w-100 bg-light text-center">
-            <small>Connector &#169; 2020</small>
-        </div>
+        
     </div>
     </div>
 </div>
